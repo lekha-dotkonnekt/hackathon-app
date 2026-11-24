@@ -46,6 +46,7 @@ p{margin:0} a{color:var(--person)} button{font:inherit;color:inherit}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
 .brand .title{font-size:16px;white-space:nowrap}
 .who{margin-left:auto;color:var(--text2);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logo{height:36px;width:auto;flex:none;color:var(--text)}
 .mark{width:28px;height:28px;flex:none;color:var(--text)}
 .mark.big{width:44px;height:44px}
 .mark .arc{transform-origin:16px 16px}
