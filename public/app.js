@@ -53,6 +53,7 @@ function fmtTime(ms) {
 }
 const fmtNum = (n) => (n == null ? '–' : (Math.round(n * 10) / 10).toFixed(1));
 const maxTotal = () => S.criteria.reduce((a, c) => a + c.max, 0);
+const pct = (w) => `${Math.round(w * 100)}%`;
 const sumScores = (s) => S.criteria.reduce((a, c) => a + (Number.isInteger(s && s[c.id]) ? s[c.id] : 0), 0);
 const isComplete = (s) => !!s && S.criteria.length > 0 && S.criteria.every((c) => Number.isInteger(s[c.id]) && s[c.id] >= 1 && s[c.id] <= c.max);
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
@@ -607,10 +608,10 @@ function adminSubmissions() {
 function adminScores() {
   const D = S.data; const max = maxTotal(); const nJ = D.judges.length;
   const table = h('div', { class: 'card' },
-    h('div', { class: 'spread' }, h('h2', { text: 'Standings' }), h('span', { class: 'muted small', text: `Each phase is the judges’ average out of ${max}. Total is out of ${max * 2}.` })),
+    h('div', { class: 'spread' }, h('h2', { text: 'Standings' }), h('span', { class: 'muted small', text: `Each phase is the judges’ average out of ${max}. ${S.phases.map((p) => `${p.short} counts ${pct(p.weight)}`).join(', ')}. Total is out of 100.` })),
     h('div', { class: 'scroll mt8' }, h('table', null,
       h('thead', null, h('tr', null, h('th', { class: 'num', text: 'Rank' }), h('th', { text: 'Team' }),
-        S.phases.map((p) => h('th', { class: 'num', text: p.short })), h('th', { class: 'num', text: 'Total' }), h('th', { text: '' }))),
+        S.phases.map((p) => h('th', { class: 'num', text: `${p.short} (${pct(p.weight)})` })), h('th', { class: 'num', text: 'Total' }), h('th', { text: '' }))),
       h('tbody', null, D.standings.map((r) => h('tr', null,
         h('td', { class: 'num', text: String(r.rank) }),
         h('td', { text: 'Team ' + r.codeName }),

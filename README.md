@@ -5,7 +5,7 @@ Team submissions and blind judging, built for Vercel with a SQLite database (Tur
 - **Organiser (admin):** creates, edits and deletes teams; adds, edits and removes judges; sets every username and password; opens and closes each phase; sees all scores; publishes the ranking.
 - **Teams:** sign in with the login the organiser gives them and edit their submission (write-up plus any number of links) while submissions are open.
 - **Judges:** sign in, see teams by code name only (never members), and score each team 1 to 10 on five criteria in Phase 1 (blind) and Phase 2 (after the demo). Each judge sees only their own scores.
-- **Results:** total = Phase 1 average + Phase 2 average, out of 100. Teams and judges only ever see the ranking.
+- **Results:** each phase's judge average (out of 50) is turned into a percentage, then weighted: total = 20% of Phase 1 + 80% of Phase 2, out of 100. The weights are set in `config.js`. Teams and judges only ever see the ranking.
 
 The server enforces all of these rules, not just the page.
 
