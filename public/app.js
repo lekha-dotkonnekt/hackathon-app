@@ -330,7 +330,7 @@ function judgeTeamView(t, phase, open) {
         type: 'button', id: `sc-${c.id}-${n}`, disabled: !open, 'aria-pressed': String(v[c.id] === n), 'aria-label': `${c.name} ${n}`,
         onclick: () => { v[c.id] = n; S.scoreDirty = true; S.flash.score = false; render(); },
       }, String(n))))));
-  const comment = h('textarea', { id: 'sc-comment', readonly: !open, maxlength: '2000', placeholder: 'Optional notes for the organiser',
+  const comment = h('textarea', { id: 'sc-comment', readonly: !open, required: true, 'aria-required': 'true', maxlength: '2000', placeholder: 'Your reasoning for these scores, for the organiser',
     oninput: (e) => { S.scoreDraft.comment = e.target.value; S.scoreDirty = true; S.flash.score = false; } });
   comment.value = S.scoreDraft.comment || '';
   const complete = isComplete(v);
@@ -345,14 +345,19 @@ function judgeTeamView(t, phase, open) {
     h('div', { class: 'card' },
       h('div', { class: 'spread' }, h('h2', { text: 'Your scores' }), h('span', { class: 'title', text: `${sumScores(v)} of ${maxTotal()}` })),
       h('div', { class: 'mt4' }, crits),
-      h('label', { class: 'field mt8', for: 'sc-comment' }, h('span', { class: 'lbl', text: 'Comment' }), comment),
+      h('label', { class: 'field mt8', for: 'sc-comment' }, h('span', { class: 'lbl', text: 'Comment (required)' }), comment),
       h('div', { class: 'spread mt16' },
-        h('span', { class: 'muted small', text: complete ? (saved ? 'You can change saved scores while this phase is open.' : 'Not saved yet') : 'Score every criterion to save.' }),
+        h('span', { class: 'muted small', text: complete ? (saved ? 'You can change saved scores while this phase is open.' : 'Not saved yet') : 'Score every criterion and add a comment to save.' }),
         action)));
 }
 async function saveScores(teamId, phaseId) {
   const scores = {};
   S.criteria.forEach((c) => { scores[c.id] = S.scoreDraft.values[c.id]; });
+  if (!(S.scoreDraft.comment || '').trim()) {
+    S.msg = { kind: 'error', text: 'Add a comment before saving.' }; render();
+    const el = document.getElementById('sc-comment'); if (el) el.focus();
+    return;
+  }
   S.saving.score = true; S.msg = null; render();
   try {
     await api('PUT', `/api/judge/scores/${teamId}/${phaseId}`, { scores, comment: S.scoreDraft.comment || '' });
