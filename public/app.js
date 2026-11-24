@@ -633,7 +633,27 @@ function adminScores() {
               h('td', { class: 'wrap muted', text: s ? s.comment : '' }));
           })))))));
   }
-  return h('div', { class: 'stack' }, table, detail);
+  return h('div', { class: 'stack' }, table, detail, clearScoresCard());
+}
+function clearScoresCard() {
+  const D = S.data;
+  return h('div', { class: 'card stack tight' },
+    h('h2', { text: 'Clear a judge’s scores' }),
+    h('p', { class: 'muted small', text: 'Deletes that judge’s scores and comments so they can score again. Other judges aren’t affected. This can’t be undone.' }),
+    D.results && D.results.published ? h('p', { class: 'needs small', text: 'Results are published. Clearing scores doesn’t withdraw them, so withdraw them on the Overview tab if needed.' }) : null,
+    D.judges.length === 0 ? h('p', { class: 'muted', text: 'No judges yet.' }) :
+      h('div', { class: 'list' }, D.judges.map((j) => {
+        const mine = D.sheets.filter((s) => s.judgeId === j.id);
+        const opts = S.phases.map((p) => [p.id, p.short, mine.filter((s) => s.phase === p.id).length]).concat([['all', 'all phases', mine.length]]);
+        return h('div', { class: 'item' }, h('div', { class: 'grow' },
+          h('div', { class: 'spread' }, h('div', { class: 'title', text: j.displayName }),
+            h('span', { class: 'muted small', text: S.phases.map((p, i) => `${p.short}: ${opts[i][2]}`).join(' · ') })),
+          h('div', { class: 'row mt8' }, opts.map(([id, label, n]) => h('button', { class: 'btn danger small', type: 'button', disabled: n === 0,
+            onclick: () => { S.confirm = { kind: 'clearScores', id: `${j.id}:${id}` }; render(); } }, `Clear ${label}`))),
+          opts.map(([id, label, n]) => confirmBox('clearScores', `${j.id}:${id}`,
+            `Delete ${j.displayName}’s ${n} score sheet${n === 1 ? '' : 's'} for ${label}? They will need to score again.`,
+            () => adminAction(() => api('POST', `/api/admin/judges/${j.id}/scores/clear`, { phase: id }), `${j.displayName}’s ${label} scores cleared.`)))));
+      })));
 }
 
 function adminAccount() {
