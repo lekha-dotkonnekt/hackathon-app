@@ -19,7 +19,7 @@ const TEAMS = [
   ['Crimson Kite', 'Rohtash, Vaibhav, Ishita'],
   ['Jade Phoenix', 'P1, Nripen'],
 ];
-const JUDGES = ['Gaurav', 'Siva', 'Sophia', 'Gitika', 'Sreekar', 'Anurag'];
+const JUDGES = ['Gaurav', 'Siva', 'Sophia', 'Gitika', 'Sreekar', 'Anurag', 'Prasad', 'Chandan', 'Raghavan'];
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 (async () => {
