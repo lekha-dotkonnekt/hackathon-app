@@ -4,7 +4,7 @@ Team submissions and blind judging, built for Vercel with a SQLite database (Tur
 
 - **Organiser (admin):** creates, edits and deletes teams; adds, edits and removes judges; sets every username and password; opens and closes each phase; sees all scores; publishes the ranking.
 - **Teams:** sign in with the login the organiser gives them and edit their submission (write-up plus any number of links) while submissions are open.
-- **Judges:** sign in, see teams by code name only (never members), and score each team 1 to 10 on five criteria in Phase 1 (blind) and Phase 2 (after the demo). Each judge sees only their own scores.
+- **Judges:** sign in, see teams by code name only (never members), and score each team 1 to 10 on five criteria per phase. Phase 1 (blind): Innovation, Business impact, Technical feasibility, Responsible AI, Presentation. Phase 2 (after the demo): Idea & presentation, Business impact, Technical feasibility, Responsible AI, Project execution. A comment is required. Each judge sees only their own scores.
 - **Results:** each phase's judge average (out of 50) is turned into a percentage, then weighted: total = 20% of Phase 1 + 80% of Phase 2, out of 100. The weights are set in `config.js`. Teams and judges only ever see the ranking.
 
 The server enforces all of these rules, not just the page.
@@ -62,4 +62,4 @@ scripts/             create-admin and seed
 vercel.json          Routing and security headers
 ```
 
-To change the criteria, edit `config.js` and the matching columns in `score_sheets` in `lib/db.js`, starting with a fresh database.
+To change the criteria, edit each phase's `criteria` in `config.js`. A new criterion also needs its column in `score_sheets` in `lib/db.js` (and in an existing database, a migration like `migrateScoreSheets`).

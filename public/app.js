@@ -10,7 +10,7 @@ const FIELDS = [
 ];
 
 const S = {
-  loading: true, me: null, settings: null, criteria: [], phases: [], results: null,
+  loading: true, me: null, settings: null, phases: [], results: null,
   msg: null, saving: {}, flash: {},
   // team
   submission: null, draft: null, dirty: false, linkErrors: {},
@@ -52,10 +52,11 @@ function fmtTime(ms) {
   return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) + ', ' + t;
 }
 const fmtNum = (n) => (n == null ? '–' : (Math.round(n * 10) / 10).toFixed(1));
-const maxTotal = () => S.criteria.reduce((a, c) => a + c.max, 0);
+const critsOf = (phaseId) => (S.phases.find((p) => p.id === phaseId) || { criteria: [] }).criteria;
+const maxTotal = (phaseId) => critsOf(phaseId).reduce((a, c) => a + c.max, 0);
 const pct = (w) => `${Math.round(w * 100)}%`;
-const sumScores = (s) => S.criteria.reduce((a, c) => a + (Number.isInteger(s && s[c.id]) ? s[c.id] : 0), 0);
-const isComplete = (s) => !!s && S.criteria.length > 0 && S.criteria.every((c) => Number.isInteger(s[c.id]) && s[c.id] >= 1 && s[c.id] <= c.max);
+const sumScores = (s, phaseId) => critsOf(phaseId).reduce((a, c) => a + (Number.isInteger(s && s[c.id]) ? s[c.id] : 0), 0);
+const isComplete = (s, phaseId) => { const cs = critsOf(phaseId); return !!s && cs.length > 0 && cs.every((c) => Number.isInteger(s[c.id]) && s[c.id] >= 1 && s[c.id] <= c.max); };
 const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 function generatePassword(len = 12) {
   const A = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -150,7 +151,7 @@ function loginView() {
 /* ---------------- loading data ---------------- */
 async function loadAll() {
   const me = await api('GET', '/api/me');
-  S.me = me.user; S.settings = me.settings; S.criteria = me.criteria; S.phases = me.phases;
+  S.me = me.user; S.settings = me.settings; S.phases = me.phases;
   if (!S.me) return;
   const jobs = [api('GET', '/api/results').then((r) => { S.results = r; })];
   if (S.me.role === 'team') jobs.push(loadTeam());
@@ -297,7 +298,7 @@ function judgeView() {
     if (t) return judgeTeamView(t, phase, open);
     S.team = null;
   }
-  const done = S.jTeams.filter((t) => { const s = mySheet(t.id, phase.id); return s && isComplete(s.scores); }).length;
+  const done = S.jTeams.filter((t) => { const s = mySheet(t.id, phase.id); return s && isComplete(s.scores, phase.id); }).length;
   return h('div', { class: 'stack' },
     h('div', { class: 'hero' }, h('h1', { text: 'Judging' }),
       h('p', { class: 'muted', text: 'Score each team on its own. Nobody else sees your scores, and teams never see any scores.' })),
@@ -314,7 +315,7 @@ function judgeView() {
           return h('button', { class: 'pick', type: 'button', onclick: () => { S.team = t.id; S.scoreDraft = null; S.scoreDirty = false; S.flash.score = false; render(); window.scrollTo(0, 0); } },
             h('div', { class: 'grow' }, h('div', { class: 'name title', text: 'Team ' + t.codeName }),
               h('div', { class: 'meta', text: t.submission ? (t.submission.title || 'Untitled project') : 'No submission yet' })),
-            s && isComplete(s.scores) ? h('span', { class: 'ok small', text: `✓ ${sumScores(s.scores)} of ${maxTotal()}` }) : h('span', { class: 'needs small', text: 'Not scored' }),
+            s && isComplete(s.scores, phase.id) ? h('span', { class: 'ok small', text: `✓ ${sumScores(s.scores, phase.id)} of ${maxTotal(phase.id)}` }) : h('span', { class: 'needs small', text: 'Not scored' }),
             h('span', { class: 'chev', 'aria-hidden': 'true', text: '›' }));
         }))));
 }
@@ -324,7 +325,7 @@ function judgeTeamView(t, phase, open) {
     S.scoreDraft = { team: t.id, phase: phase.id, values: Object.assign({}, saved ? saved.scores : {}), comment: saved ? saved.comment : '' };
   }
   const v = S.scoreDraft.values;
-  const crits = S.criteria.map((c) => h('div', { class: 'crit' },
+  const crits = critsOf(phase.id).map((c) => h('div', { class: 'crit' },
     h('div', { class: 'spread' }, h('span', { class: 'lbl', text: c.name }), h('span', { class: 'muted small', text: Number.isInteger(v[c.id]) ? `${v[c.id]} of ${c.max}` : 'Not scored' })),
     h('div', { class: 'score-grid', role: 'group', 'aria-label': c.name },
       Array.from({ length: c.max }, (_, i) => i + 1).map((n) => h('button', {
@@ -334,7 +335,7 @@ function judgeTeamView(t, phase, open) {
   const comment = h('textarea', { id: 'sc-comment', readonly: !open, required: true, 'aria-required': 'true', maxlength: '2000', placeholder: 'Your reasoning for these scores, for the organiser',
     oninput: (e) => { S.scoreDraft.comment = e.target.value; S.scoreDirty = true; S.flash.score = false; } });
   comment.value = S.scoreDraft.comment || '';
-  const complete = isComplete(v);
+  const complete = isComplete(v, phase.id);
   let action;
   if (!open) action = h('span', { class: 'muted small', text: `${phase.short} is closed, so scores can’t be changed.` });
   else if (S.flash.score && !S.scoreDirty) action = h('button', { class: 'btn saved', type: 'button', disabled: true }, '✓ Saved');
@@ -344,7 +345,7 @@ function judgeTeamView(t, phase, open) {
     h('div', { class: 'hero' }, h('h1', { text: 'Team ' + t.codeName }), statusLine(open, phase.name + ', open', phase.name + ', closed')),
     h('div', { class: 'card' }, submissionView(t.submission)),
     h('div', { class: 'card' },
-      h('div', { class: 'spread' }, h('h2', { text: 'Your scores' }), h('span', { class: 'title', text: `${sumScores(v)} of ${maxTotal()}` })),
+      h('div', { class: 'spread' }, h('h2', { text: 'Your scores' }), h('span', { class: 'title', text: `${sumScores(v, phase.id)} of ${maxTotal(phase.id)}` })),
       h('div', { class: 'mt4' }, crits),
       h('label', { class: 'field mt8', for: 'sc-comment' }, h('span', { class: 'lbl', text: 'Comment (required)' }), comment),
       h('div', { class: 'spread mt16' },
@@ -353,7 +354,7 @@ function judgeTeamView(t, phase, open) {
 }
 async function saveScores(teamId, phaseId) {
   const scores = {};
-  S.criteria.forEach((c) => { scores[c.id] = S.scoreDraft.values[c.id]; });
+  critsOf(phaseId).forEach((c) => { scores[c.id] = S.scoreDraft.values[c.id]; });
   if (!(S.scoreDraft.comment || '').trim()) {
     S.msg = { kind: 'error', text: 'Add a comment before saving.' }; render();
     const el = document.getElementById('sc-comment'); if (el) el.focus();
@@ -606,9 +607,9 @@ function adminSubmissions() {
 }
 
 function adminScores() {
-  const D = S.data; const max = maxTotal(); const nJ = D.judges.length;
+  const D = S.data; const nJ = D.judges.length;
   const table = h('div', { class: 'card' },
-    h('div', { class: 'spread' }, h('h2', { text: 'Standings' }), h('span', { class: 'muted small', text: `Each phase is the judges’ average out of ${max}. ${S.phases.map((p) => `${p.short} counts ${pct(p.weight)}`).join(', ')}. Total is out of 100.` })),
+    h('div', { class: 'spread' }, h('h2', { text: 'Standings' }), h('span', { class: 'muted small', text: `Each phase is the judges’ average. ${S.phases.map((p) => `${p.short} is out of ${maxTotal(p.id)} and counts ${pct(p.weight)}`).join(', ')}. Total is out of 100.` })),
     h('div', { class: 'scroll mt8' }, h('table', null,
       h('thead', null, h('tr', null, h('th', { class: 'num', text: 'Rank' }), h('th', { text: 'Team' }),
         S.phases.map((p) => h('th', { class: 'num', text: `${p.short} (${pct(p.weight)})` })), h('th', { class: 'num', text: 'Total' }), h('th', { text: '' }))),
@@ -625,12 +626,12 @@ function adminScores() {
       h('div', { class: 'spread' }, h('h2', { text: `Team ${t.codeName} in detail` }), h('button', { class: 'btn ghost small', type: 'button', onclick: () => { S.scoreTeam = null; render(); } }, 'Close')),
       S.phases.map((p) => h('div', { class: 'stack tight' }, h('h3', { text: p.name }),
         h('div', { class: 'scroll' }, h('table', null,
-          h('thead', null, h('tr', null, h('th', { text: 'Judge' }), S.criteria.map((c) => h('th', { class: 'num', text: c.name })), h('th', { class: 'num', text: 'Sum' }), h('th', { text: 'Comment' }))),
+          h('thead', null, h('tr', null, h('th', { text: 'Judge' }), critsOf(p.id).map((c) => h('th', { class: 'num', text: c.name })), h('th', { class: 'num', text: 'Sum' }), h('th', { text: 'Comment' }))),
           h('tbody', null, D.judges.map((j) => {
             const s = D.sheets.find((x) => x.judgeId === j.id && x.teamId === t.id && x.phase === p.id);
             return h('tr', null, h('td', { text: j.displayName }),
-              S.criteria.map((c) => h('td', { class: 'num', text: s ? String(s.scores[c.id]) : '–' })),
-              h('td', { class: 'num title', text: s ? String(sumScores(s.scores)) : '–' }),
+              critsOf(p.id).map((c) => h('td', { class: 'num', text: s && s.scores[c.id] != null ? String(s.scores[c.id]) : '–' })),
+              h('td', { class: 'num title', text: s && isComplete(s.scores, p.id) ? String(sumScores(s.scores, p.id)) : '–' }),
               h('td', { class: 'wrap muted', text: s ? s.comment : '' }));
           })))))));
   }
